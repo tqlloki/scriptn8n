@@ -388,13 +388,29 @@ EOF
 }
 
 # Main script execution
+
+# Mã màu ANSI với `tput`
+RED=$(tput setaf 1)  # Màu đỏ
+NC=$(tput sgr0)      # Reset màu về mặc định
+
 check_os
 get_public_ip
 
-read -p "Nhập tên miền để chạy n8n, đảm bảo đã trỏ tên miền về IP VPS/Server là $IP: " DOMAIN
+echo -n "Nhập tên miền để chạy n8n, đảm bảo đã trỏ tên miền về IP VPS/Server là $IP: "
+
+# Đổi màu input thành đỏ
+echo -ne "$RED"
+read DOMAIN
+echo -ne "$NC"  # Reset màu về mặc định sau khi nhập
+
 check_domain_dns
 
-read -p "Nhập email dùng cho cài SSL free: " EMAIL
+echo -n "Nhập email dùng cho cài SSL free: "
+
+# Đổi màu input thành đỏ
+echo -ne "$RED"
+read EMAIL
+echo -ne "$NC"  # Reset màu về mặc định sau khi nhập
 
 echo "Bạn có muốn sử dụng SMTP để gửi email khi dùng n8n không? (y/n)"
 echo "Nếu hiện tại chưa có nhu cầu hoặc chưa có SMTP thì chọn n để bỏ qua, sau này cập nhật sau."
@@ -403,7 +419,13 @@ echo "SMTP Host: ví dụ smtp.gmail.com"
 echo "SMTP User: ví dụ abc@gmail.com"
 echo "SMTP Password: với gmail thì dùng mật khẩu ứng dụng, còn các dịch vụ email khác thì dùng password bình thường"
 echo "SMTP Sender Email: địa chỉ email gửi đi mà bạn muốn bên nhận email thấy, ví dụ admin@$DOMAIN"
-read -p "Chọn? (y/n): " USE_SMTP
+echo -n "Chọn? (y/n): "
+
+# Đổi màu input thành đỏ
+echo -ne "$RED"
+read USE_SMTP
+echo -ne "$NC"  # Reset màu về mặc định sau khi nhập
+
 if [[ "$USE_SMTP" == "y" || "$USE_SMTP" == "Y" ]]; then
   read -p "SMTP Host: " SMTP_HOST
   read -p "SMTP User: " SMTP_USER
@@ -420,7 +442,13 @@ fi
 
 # Hỏi người dùng về cách cài đặt PostgreSQL
 echo "Bạn có muốn cài đặt PostgreSQL trong Docker Compose cùng với n8n không? hay thích cài Docker Compose n8n thôi, còn postgresql cài riêng trên VPS/Server? (y/n)"
-read -p "Chọn? (y/n): " USE_DOCKER_POSTGRES
+echo -n "Chọn? (y/n): "
+
+# Đổi màu input thành đỏ
+echo -ne "$RED"
+read USE_DOCKER_POSTGRES
+echo -ne "$NC"  # Reset màu về mặc định sau khi nhập
+
 if [[ "$USE_DOCKER_POSTGRES" == "y" || "$USE_DOCKER_POSTGRES" == "Y" ]]; then
   USE_DOCKER_POSTGRES=true
 else
