@@ -79,11 +79,13 @@ configure_postgresql() {
     ubuntu)
       sudo sed -i "s/#listen_addresses = 'localhost'/listen_addresses = '*'/g" /etc/postgresql/16/main/postgresql.conf
       echo "host    all             all             172.16.0.0/12            md5" | sudo tee -a /etc/postgresql/16/main/pg_hba.conf
+      echo "host    all             all             192.168.0.0/16            md5" | sudo tee -a /etc/postgresql/16/main/pg_hba.conf
       sudo systemctl reload postgresql
       ;;
     almalinux)
       sudo sed -i "s/#listen_addresses = 'localhost'/listen_addresses = '*'/g" /var/lib/pgsql/16/data/postgresql.conf
       echo "host    all             all             172.16.0.0/12            md5" | sudo tee -a /var/lib/pgsql/16/data/pg_hba.conf
+      echo "host    all             all             192.168.0.0/16            md5" | sudo tee -a /var/lib/pgsql/16/data/pg_hba.conf
       sudo systemctl reload postgresql-16
       ;;
   esac
