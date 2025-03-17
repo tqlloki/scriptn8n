@@ -40,6 +40,11 @@ check_domain_dns() {
 
 # Function to install PostgreSQL
 install_postgresql() {
+  if command -v psql > /dev/null; then
+    echo "PostgreSQL đã được cài đặt."
+    return
+  fi
+
   case "$OS" in
     ubuntu)
       sudo cp /etc/apt/sources.list /etc/apt/sources.list.bak
@@ -77,18 +82,23 @@ configure_postgresql() {
     ubuntu)
       sudo sed -i "s/#listen_addresses = 'localhost'/listen_addresses = '*'/g" /etc/postgresql/16/main/postgresql.conf
       echo "host    all             all             172.18.0.0/16            md5" | sudo tee -a /etc/postgresql/16/main/pg_hba.conf
-      sudo systemctl restart postgresql
+      sudo systemctl reload postgresql
       ;;
     almalinux)
       sudo sed -i "s/#listen_addresses = 'localhost'/listen_addresses = '*'/g" /var/lib/pgsql/16/data/postgresql.conf
       echo "host    all             all             172.18.0.0/16            md5" | sudo tee -a /var/lib/pgsql/16/data/pg_hba.conf
-      sudo systemctl restart postgresql-16
+      sudo systemctl reload postgresql-16
       ;;
   esac
 }
 
 # Function to install Docker
 install_docker() {
+  if command -v docker > /dev/null; then
+    echo "Docker đã được cài đặt."
+    return
+  fi
+
   case "$OS" in
     ubuntu)
       sudo DEBIAN_FRONTEND=noninteractive apt update
@@ -115,17 +125,128 @@ install_docker() {
 # Function to create .env and docker-compose.yml
 create_env_and_docker_compose() {
   INSTALL_DIR="/root/$DOMAIN"
-  mkdir -p "$INSTALL_DIR/.n8n_storage"
-  chmod 777 "$INSTALL_DIR/.n8n_storage"
+  mkdir -p "$INSTALL_DIR/n8n_storage"
+  chmod 777 "$INSTALL_DIR/n8n_storage"
   cd "$INSTALL_DIR"
 
   N8N_BASIC_AUTH_USER="admin_$(openssl rand -hex 3)"
   N8N_BASIC_AUTH_PASSWORD=$(openssl rand -base64 12)
   N8N_ENCRYPTION_KEY=$(openssl rand -base64 32)
 
-  cat <<EOF >.env
-POSTGRES_USER=$DB_USER
-POSTGRES_PASSWORD=$DB_PASSWORD
+  if [ "$USE_DOCKER_POSTGRES" = true ]; then
+    mkdir -p "$INSTALL_DIR/postgres_data"
+
+    PG_USER="admin_$(openssl rand -hex 4)"
+    PG_PASSSWORD=$(openssl rand -base64 16)
+
+    cat <<EOF > init-data.sh
+#!/bin/bash
+set -e;
+
+if [ -n "\${POSTGRES_NON_ROOT_USER:-}" ] && [ -n "\${POSTGRES_NON_ROOT_PASSWORD:-}" ]; then
+    psql -v ON_ERROR_STOP=1 --username "\$POSTGRES_USER" --dbname "\$POSTGRES_DB" <<-EOSQL
+        CREATE USER \${POSTGRES_NON_ROOT_USER} WITH PASSWORD '\${POSTGRES_NON_ROOT_PASSWORD}';
+        GRANT ALL PRIVILEGES ON DATABASE \${POSTGRES_DB} TO \${POSTGRES_NON_ROOT_USER};
+        GRANT CREATE ON SCHEMA public TO \${POSTGRES_NON_ROOT_USER};
+    EOSQL
+else
+    echo "SETUP INFO: No Environment variables given!"
+fi
+EOF
+
+    cat <<EOF >.env
+POSTGRES_NON_ROOT_USER=$DB_USER
+POSTGRES_NON_ROOT_PASSWORD=$DB_PASSWORD
+POSTGRES_DB=$DB_NAME
+
+POSTGRES_USER=$PG_USER
+POSTGRES_PASSWORD=$PG_PASSSWORD
+
+DOMAIN_NAME=$DOMAIN
+
+SMTP_HOST=$SMTP_HOST
+SMTP_PORT=587
+SMTP_USER=$SMTP_USER
+SMTP_PASS=$SMTP_PASS
+SMTP_SENDER=$SMTP_SENDER
+SMTP_SSL=false
+
+N8N_BASIC_AUTH_USER=$N8N_BASIC_AUTH_USER
+N8N_BASIC_AUTH_PASSWORD=$N8N_BASIC_AUTH_PASSWORD
+GENERIC_TIMEZONE=Asia/Ho_Chi_Minh
+N8N_ENCRYPTION_KEY="$N8N_ENCRYPTION_KEY"
+EOF
+
+    cat <<EOF >docker-compose.yml
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16
+    restart: always
+    environment:
+      - POSTGRES_USER
+      - POSTGRES_PASSWORD
+      - POSTGRES_DB
+      - POSTGRES_NON_ROOT_USER
+      - POSTGRES_NON_ROOT_PASSWORD
+    volumes:
+      - ./postgres_data:/var/lib/postgresql/data
+      - ./init-data.sh:/docker-entrypoint-initdb.d/init-data.sh
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -h localhost -U ${POSTGRES_USER} -d ${POSTGRES_DB}']
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  n8n:
+    image: docker.n8n.io/n8nio/n8n
+    restart: always
+    environment:
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=postgres
+      - DB_POSTGRESDB_PORT=5432
+      - DB_POSTGRESDB_DATABASE=\${POSTGRES_DB}
+      - DB_POSTGRESDB_USER=\${POSTGRES_NON_ROOT_USER}
+      - DB_POSTGRESDB_PASSWORD=\${POSTGRES_NON_ROOT_PASSWORD}
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=\${N8N_BASIC_AUTH_USER}
+      - N8N_BASIC_AUTH_PASSWORD=\${N8N_BASIC_AUTH_PASSWORD}
+      - N8N_HOST=\${DOMAIN_NAME}
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=https
+      - NODE_ENV=production
+      - WEBHOOK_URL=https://\${DOMAIN_NAME}/
+      - GENERIC_TIMEZONE=\${GENERIC_TIMEZONE}
+      - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=true
+      - N8N_RUNNERS_ENABLED=true
+      - N8N_EMAIL_MODE=smtp
+      - N8N_SMTP_HOST=\${SMTP_HOST}
+      - N8N_SMTP_PORT=\${SMTP_PORT}
+      - N8N_SMTP_USER=\${SMTP_USER}
+      - N8N_SMTP_PASS=\${SMTP_PASS}
+      - N8N_SMTP_SENDER=\${SMTP_SENDER}
+      - N8N_SMTP_SSL=\${SMTP_SSL}
+      - N8N_ENCRYPTION_KEY=\${N8N_ENCRYPTION_KEY}
+      - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=true
+      - EXECUTIONS_DATA_SAVE_ON_ERROR=all
+      - EXECUTIONS_DATA_SAVE_ON_SUCCESS=all
+      - EXECUTIONS_DATA_SAVE_ON_PROGRESS=true
+      - EXECUTIONS_DATA_SAVE_MANUAL_EXECUTIONS=true
+      - EXECUTIONS_DATA_PRUNE=true
+      - EXECUTIONS_DATA_MAX_AGE=168
+      - EXECUTIONS_DATA_PRUNE_MAX_COUNT=30000
+      - N8N_RUNNERS_ENABLED=true
+    ports:
+      - 5678:5678
+    volumes:
+      - ./n8n_storage:/home/node/.n8n
+EOF
+  else
+
+    cat <<EOF >.env
+POSTGRES_NON_ROOT_USER=$DB_USER
+POSTGRES_NON_ROOT_PASSWORD=$DB_PASSWORD
 POSTGRES_DB=$DB_NAME
 
 DOMAIN_NAME=$DOMAIN
@@ -143,7 +264,7 @@ GENERIC_TIMEZONE=Asia/Ho_Chi_Minh
 N8N_ENCRYPTION_KEY="$N8N_ENCRYPTION_KEY"
 EOF
 
-  cat <<EOF >docker-compose.yml
+    cat <<EOF >docker-compose.yml
 version: '3.8'
 
 services:
@@ -188,8 +309,9 @@ services:
     ports:
       - 5678:5678
     volumes:
-      - ./.n8n_storage:/home/node/.n8n
+      - ./n8n_storage:/home/node/.n8n
 EOF
+  fi
 
   docker compose up -d
 
@@ -202,16 +324,34 @@ EOF
 }
 
 # Function to install nginx and certbot
+# Function to install nginx and certbot
 install_nginx_and_certbot() {
-  case "$OS" in
-    ubuntu)
-      sudo DEBIAN_FRONTEND=noninteractive apt install -y nginx certbot python3-certbot-nginx cron
-      ;;
-    almalinux)
-      sudo dnf install -y epel-release
-      sudo dnf install -y nginx certbot python3-certbot-nginx
-      ;;
-  esac
+  if command -v nginx > /dev/null; then
+    echo "Nginx đã được cài đặt."
+    if ! command -v certbot > /dev/null; then
+      echo "Cài đặt Certbot..."
+      case "$OS" in
+        ubuntu)
+          sudo DEBIAN_FRONTEND=noninteractive apt install -y certbot python3-certbot-nginx
+          ;;
+        almalinux)
+          sudo dnf install -y epel-release
+          sudo dnf install -y certbot python3-certbot-nginx
+          ;;
+      esac
+    fi
+  else
+    echo "Cài đặt Nginx và Certbot..."
+    case "$OS" in
+      ubuntu)
+        sudo DEBIAN_FRONTEND=noninteractive apt install -y nginx certbot python3-certbot-nginx cron
+        ;;
+      almalinux)
+        sudo dnf install -y epel-release
+        sudo dnf install -y nginx certbot python3-certbot-nginx
+        ;;
+    esac
+  fi
 
   NGINX_CONF="/etc/nginx/conf.d/$DOMAIN.conf"
   cat <<EOF >$NGINX_CONF
@@ -279,8 +419,23 @@ else
   SMTP_SSL="false"
 fi
 
-install_postgresql
-configure_postgresql
+# Hỏi người dùng về cách cài đặt PostgreSQL
+echo "Bạn có muốn cài đặt PostgreSQL trong Docker Compose cùng với n8n không? hay thích cài Docker Compose n8n thôi, còn postgresql cài riêng trên VPS/Server? (y/n)"
+read -p "Chọn? (y/n): " USE_DOCKER_POSTGRES
+if [[ "$USE_DOCKER_POSTGRES" == "y" || "$USE_DOCKER_POSTGRES" == "Y" ]]; then
+  USE_DOCKER_POSTGRES=true
+else
+  USE_DOCKER_POSTGRES=false
+fi
+
+if [ "$USE_DOCKER_POSTGRES" = true ]; then
+  echo "PostgreSQL sẽ được cài đặt trong Docker Compose cùng với n8n."
+else
+  echo "PostgreSQL sẽ được cài đặt riêng trên VPS/Server."
+  install_postgresql
+  configure_postgresql
+fi
+
 install_docker
 create_env_and_docker_compose
 install_nginx_and_certbot
