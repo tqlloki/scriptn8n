@@ -71,9 +71,6 @@ install_postgresql() {
 
 # Function to configure PostgreSQL
 configure_postgresql() {
-  DB_USER="user_$(openssl rand -hex 4)"
-  DB_PASSWORD=$(openssl rand -base64 12)
-  DB_NAME="db_$(openssl rand -hex 4)"
   sudo -u postgres psql -c "CREATE USER $DB_USER WITH PASSWORD '$DB_PASSWORD';"
   sudo -u postgres psql -c "CREATE DATABASE $DB_NAME OWNER $DB_USER;"
   sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $DB_USER;"
@@ -427,6 +424,10 @@ if [[ "$USE_DOCKER_POSTGRES" == "y" || "$USE_DOCKER_POSTGRES" == "Y" ]]; then
 else
   USE_DOCKER_POSTGRES=false
 fi
+
+DB_USER="user_$(openssl rand -hex 4)"
+DB_PASSWORD=$(openssl rand -base64 12)
+DB_NAME="db_$(openssl rand -hex 4)"
 
 if [ "$USE_DOCKER_POSTGRES" = true ]; then
   echo "PostgreSQL sẽ được cài đặt trong Docker Compose cùng với n8n."
