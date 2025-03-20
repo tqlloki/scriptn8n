@@ -17,7 +17,7 @@ check_os() {
 
 # Function to get public IP
 get_public_ip() {
-  IP=$(curl -s ifconfig.me)
+  IP=$(curl -s --ipv4 ifconfig.me)
   echo "IPv4 Public của VPS/Server là: $IP"
 }
 
