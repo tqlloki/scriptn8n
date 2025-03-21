@@ -241,7 +241,7 @@ services:
       - EXECUTIONS_DATA_PRUNE_MAX_COUNT=30000
       - N8N_RUNNERS_ENABLED=true
     ports:
-      - 5678:5678
+      - 127.0.0.1:5678:5678
     volumes:
       - ./n8n_storage:/home/node/.n8n
 EOF
@@ -310,7 +310,7 @@ services:
       - EXECUTIONS_DATA_PRUNE_MAX_COUNT=30000
       - N8N_RUNNERS_ENABLED=true
     ports:
-      - 5678:5678
+      - 127.0.0.1:5678:5678
     volumes:
       - ./n8n_storage:/home/node/.n8n
 EOF
