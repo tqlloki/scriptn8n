@@ -49,10 +49,9 @@ setup_iptables() {
     elif [ "$OS" == "almalinux" ]; then
         sudo yum install -y iptables iptables-services
         sudo systemctl enable --now iptables
+	# Xóa rule cũ nếu tồn tại (đảm bảo rule nằm ở dòng 5, nếu không có thể cần chỉnh sửa thủ công)
+    	sudo iptables -D INPUT 5 2>/dev/null
     fi
-
-    # Xóa rule cũ nếu tồn tại (đảm bảo rule nằm ở dòng 5, nếu không có thể cần chỉnh sửa thủ công)
-    sudo iptables -D INPUT 5 2>/dev/null
 
     # Thêm các rule bảo vệ PostgreSQL
     sudo iptables -I INPUT -p tcp --dport 5432 -s 127.0.0.1 -j ACCEPT
