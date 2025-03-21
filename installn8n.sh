@@ -414,7 +414,7 @@ server {
     listen 80;
 }
 EOF
-
+  sudo systemctl enable nginx
   sudo systemctl restart nginx
   sudo certbot --nginx -d $DOMAIN --non-interactive --agree-tos --email $EMAIL
 
