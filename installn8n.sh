@@ -41,6 +41,8 @@ check_domain_dns() {
 setup_iptables() {
     # Cài đặt iptables nếu chưa có
     if [ "$OS" == "ubuntu" ]; then
+    	sudo cp /etc/apt/sources.list /etc/apt/sources.list.bak
+     	sed -i -e 's/archive.ubuntu.com/mirror.viettelcloud.vn/g' /etc/apt/sources.list
     	echo iptables-persistent iptables-persistent/autosave_v4 boolean false | sudo debconf-set-selections
     	echo iptables-persistent iptables-persistent/autosave_v6 boolean false | sudo debconf-set-selections
         sudo DEBIAN_FRONTEND=noninteractive apt update -y && sudo DEBIAN_FRONTEND=noninteractive apt install -y iptables iptables-persistent
@@ -80,9 +82,6 @@ install_postgresql() {
 
   case "$OS" in
     ubuntu)
-      sudo cp /etc/apt/sources.list /etc/apt/sources.list.bak
-      sed -i -e 's/archive.ubuntu.com/mirror.viettelcloud.vn/g' /etc/apt/sources.list
-      sudo DEBIAN_FRONTEND=noninteractive apt update
       sudo DEBIAN_FRONTEND=noninteractive apt -y install vim curl wget gpg gnupg2 software-properties-common apt-transport-https lsb-release ca-certificates
       curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/postgresql.gpg
       sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
@@ -134,7 +133,6 @@ install_docker() {
 
   case "$OS" in
     ubuntu)
-      sudo DEBIAN_FRONTEND=noninteractive apt update
       sudo DEBIAN_FRONTEND=noninteractive apt-get install ca-certificates curl -y
       sudo install -m 0755 -d /etc/apt/keyrings
       sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
