@@ -41,7 +41,9 @@ check_domain_dns() {
 setup_iptables() {
     # Cài đặt iptables nếu chưa có
     if [ "$OS" == "ubuntu" ]; then
-        sudo DEBIAN_FRONTEND=noninteractive apt update -y && sudo apt install -y iptables iptables-persistent
+    	echo iptables-persistent iptables-persistent/autosave_v4 boolean false | sudo debconf-set-selections
+    	echo iptables-persistent iptables-persistent/autosave_v6 boolean false | sudo debconf-set-selections
+        sudo DEBIAN_FRONTEND=noninteractive apt update -y && sudo DEBIAN_FRONTEND=noninteractive apt install -y iptables iptables-persistent
     elif [ "$OS" == "almalinux" ]; then
         sudo yum install -y iptables iptables-services
         sudo systemctl enable --now iptables
