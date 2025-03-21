@@ -58,8 +58,8 @@ install_postgresql() {
       sudo -u postgres psql -c "SELECT version();"
       ;;
     almalinux)
-      VERSION_ID=$(source /etc/os-release && echo ${VERSION_ID%%.*})
-      sudo curl -o /etc/pki/rpm-gpg/RPM-GPG-KEY-AlmaLinux-$VERSION_ID https://repo.almalinux.org/almalinux/RPM-GPG-KEY-AlmaLinux-$VERSION_ID
+      #VERSION_ID=$(source /etc/os-release && echo ${VERSION_ID%%.*})
+      #sudo curl -o /etc/pki/rpm-gpg/RPM-GPG-KEY-AlmaLinux-$VERSION_ID https://repo.almalinux.org/almalinux/RPM-GPG-KEY-AlmaLinux-$VERSION_ID
       sudo dnf install -y https://download.postgresql.org/pub/repos/yum/reporpms/EL-8-x86_64/pgdg-redhat-repo-latest.noarch.rpm
       sudo dnf -qy module disable postgresql
       sudo dnf install -y postgresql16-server postgresql16-contrib
