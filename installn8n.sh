@@ -38,6 +38,37 @@ check_domain_dns() {
   done
 }
 
+setup_iptables() {
+    # Cài đặt iptables nếu chưa có
+    if [ "$OS" == "ubuntu" ]; then
+        sudo DEBIAN_FRONTEND=noninteractive apt update -y && sudo apt install -y iptables iptables-persistent
+    elif [ "$OS" == "almalinux" ]; then
+        sudo yum install -y iptables iptables-services
+        sudo systemctl enable --now iptables
+    fi
+
+    # Xóa rule cũ nếu tồn tại (đảm bảo rule nằm ở dòng 5, nếu không có thể cần chỉnh sửa thủ công)
+    sudo iptables -D INPUT 5 2>/dev/null
+
+    # Thêm các rule bảo vệ PostgreSQL
+    sudo iptables -I INPUT -p tcp --dport 5432 -s 127.0.0.1 -j ACCEPT
+    sudo iptables -I INPUT -p tcp --dport 5432 -s 172.16.0.0/12 -j ACCEPT
+    sudo iptables -I INPUT -p tcp --dport 5432 -s 192.168.0.0/16 -j ACCEPT
+    sudo iptables -A INPUT -p tcp --dport 5432 -j DROP
+
+    # Lưu lại iptables để duy trì sau reboot
+    if [ "$OS" == "ubuntu" ]; then
+        sudo netfilter-persistent save
+    elif [ "$OS" == "almalinux" ]; then
+        sudo service iptables save
+    fi
+
+    # Kiểm tra lại rule
+    sudo iptables -L -v -n
+
+    echo "Iptables configuration applied successfully!"
+}
+
 # Function to install PostgreSQL
 install_postgresql() {
   if command -v psql > /dev/null; then
@@ -461,6 +492,8 @@ fi
 DB_USER="user_$(openssl rand -hex 4)"
 DB_PASSWORD=$(openssl rand -base64 12)
 DB_NAME="db_$(openssl rand -hex 4)"
+
+setup_iptables
 
 if [ "$USE_DOCKER_POSTGRES" = true ]; then
   echo "PostgreSQL sẽ được cài đặt trong Docker Compose cùng với n8n."
