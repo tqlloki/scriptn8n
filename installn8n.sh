@@ -132,6 +132,7 @@ install_docker() {
 
   case "$OS" in
     ubuntu)
+      sudo DEBIAN_FRONTEND=noninteractive apt update -y
       sudo DEBIAN_FRONTEND=noninteractive apt-get install ca-certificates curl -y
       sudo install -m 0755 -d /etc/apt/keyrings
       sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
@@ -492,12 +493,11 @@ DB_USER="user_$(openssl rand -hex 4)"
 DB_PASSWORD=$(openssl rand -base64 12)
 DB_NAME="db_$(openssl rand -hex 4)"
 
-setup_iptables
-
 if [ "$USE_DOCKER_POSTGRES" = true ]; then
   echo "PostgreSQL sẽ được cài đặt trong Docker Compose cùng với n8n."
 else
   echo "PostgreSQL sẽ được cài đặt riêng trên VPS/Server."
+  setup_iptables
   install_postgresql
   configure_postgresql
 fi
