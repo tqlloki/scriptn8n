@@ -365,7 +365,7 @@ install_nginx_and_certbot() {
       echo "Cài đặt Certbot..."
       case "$OS" in
         ubuntu)
-          sudo DEBIAN_FRONTEND=noninteractive apt install -y certbot python3-certbot-nginx
+          sudo DEBIAN_FRONTEND=noninteractive apt install -y certbot python3-certbot-nginx cron
           ;;
         almalinux)
           sudo dnf install -y epel-release
