@@ -475,7 +475,7 @@ else
 fi
 
 # Hỏi người dùng về cách cài đặt PostgreSQL
-echo "Bạn có muốn cài đặt PostgreSQL trong Docker Compose cùng với n8n không? hay thích cài Docker Compose n8n thôi, còn postgresql cài riêng trên VPS/Server? (y/n)"
+echo "Bạn có muốn cài đặt PostgreSQL trong Docker Compose cùng với n8n không? hay thích cài Docker Compose n8n thôi, còn postgresql cài riêng trên VPS/Server?"
 echo -n "Chọn? (y/n): "
 
 # Đổi màu input thành đỏ
