@@ -21,6 +21,7 @@ check_os() {
                 echo "Đã cập nhật RPM GPG key mới cho AlmaLinux 8."
               fi
           fi
+	;;
         ubuntu)
           cp /etc/apt/sources.list /etc/apt/sources.list.bak
           sed -i -e 's/archive.ubuntu.com/mirror.viettelcloud.vn/g' /etc/apt/sources.list
