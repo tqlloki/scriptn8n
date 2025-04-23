@@ -7,6 +7,26 @@ check_os() {
   case "$OS" in
     ubuntu|almalinux)
       echo "Hệ điều hành được hỗ trợ: $OS"
+      case "$OS" in
+        almalinux)
+          VERSION_ID=$(source /etc/os-release && echo ${VERSION_ID%%.*})
+          if [[ "$VERSION_ID" == "8" ]]; then
+              KEY_FILE="/etc/pki/rpm-gpg/RPM-GPG-KEY-AlmaLinux"
+              FILE_SIZE=$(stat -c %s "$KEY_FILE")
+              if [[ "$FILE_SIZE" -eq 3494 ]]; then
+                rm -f "$KEY_FILE"
+                rpm --erase gpg-pubkey-3abb34f8-5ffd890e
+                curl -o "$KEY_FILE" https://repo.almalinux.org/almalinux/RPM-GPG-KEY-AlmaLinux-8
+                rpm --import "$KEY_FILE"
+                echo "Đã cập nhật RPM GPG key mới cho AlmaLinux 8."
+              fi
+          fi
+        ubuntu)
+          cp /etc/apt/sources.list /etc/apt/sources.list.bak
+          sed -i -e 's/archive.ubuntu.com/mirror.viettelcloud.vn/g' /etc/apt/sources.list
+          echo "Đã sao lưu và cập nhật sources.list cho Ubuntu."
+          ;;
+      esac
       ;;
     *)
       echo "Hệ điều hành không được hỗ trợ. Vui lòng sử dụng Ubuntu hoặc AlmaLinux."
@@ -41,8 +61,8 @@ check_domain_dns() {
 setup_iptables() {
     # Cài đặt iptables nếu chưa có
     if [ "$OS" == "ubuntu" ]; then
-    	sudo cp /etc/apt/sources.list /etc/apt/sources.list.bak
-     	sed -i -e 's/archive.ubuntu.com/mirror.viettelcloud.vn/g' /etc/apt/sources.list
+    	#sudo cp /etc/apt/sources.list /etc/apt/sources.list.bak
+     	#sed -i -e 's/archive.ubuntu.com/mirror.viettelcloud.vn/g' /etc/apt/sources.list
     	echo iptables-persistent iptables-persistent/autosave_v4 boolean false | sudo debconf-set-selections
     	echo iptables-persistent iptables-persistent/autosave_v6 boolean false | sudo debconf-set-selections
         sudo DEBIAN_FRONTEND=noninteractive apt update -y && sudo DEBIAN_FRONTEND=noninteractive apt install -y iptables iptables-persistent
