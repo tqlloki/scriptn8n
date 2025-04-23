@@ -442,11 +442,16 @@ EOF
   (crontab -l 2>/dev/null; echo "0 0 * * * certbot renew --quiet && systemctl reload nginx") | crontab -
 }
 
+#-------------------------------------------------------------------------------------------------------------------
 # Main script execution
 
 # Mã màu ANSI với `tput`
 RED=$(tput setaf 1)  # Màu đỏ
 NC=$(tput sgr0)      # Reset màu về mặc định
+
+echo "╔══════════════════════════════════════════════════════════════════════╗"
+echo "║      BẠN ĐANG SỬ DỤNG SCRIPT CÀI ĐẶT N8N DO 123HOST PHÁT TRIỂN       ║"
+echo "╚══════════════════════════════════════════════════════════════════════╝"
 
 check_os
 get_public_ip
